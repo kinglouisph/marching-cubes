@@ -5,6 +5,8 @@
 #include <sys/time.h>
 #include <math.h>
 
+//#include <table.h>
+
 //glm
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -14,6 +16,8 @@
 #include <glm/gtx/quaternion.hpp>
 #include <glm/gtx/string_cast.hpp>
 #include <glm/gtx/norm.hpp>
+
+#include "table.h"
 
 uint32_t VBO;
 uint32_t VAO;
@@ -36,27 +40,30 @@ const char* GetGLErrorStr(GLenum err)
     }
 }
 
-float camxr = M_PI_2;
+float camxr = 0.0f;
 float camyr = 0.0f;
 const float camRotSpeed = 0.003f;
+const float camSpeed = 0.5f;
 glm::vec3 camPos = glm::vec3(0.0f,0.0f,0.0f);
 glm::vec3 camDir = glm::vec3(0.0f,0.0f,1.0f);
+glm::vec3 camUp = glm::vec3(0.0f,1.0f,0.0f);
 double lmx = 0.0f;
 double lmy = 0.0f;
-char firstMouse 
+char firstMouse = 1;
 
-char chunkWidth = 20;
-char chunkHeight = 30;
+const int chunkWidth = 20;
+const int chunkHeight = 30;
+const int chunksWidth = 2;
+const int chunksLength = 2;
+const float cubeSize = 2.0f;
+
 typedef struct Chunk {
-    float data[chunkWidth][chunkHeight][chunkWidth]//,
-    //int x,
-    //int y
+    float data[chunkWidth][chunkHeight][chunkWidth];
 } Chunk;
 
-Chunk* chunks[1][1];
 
-chunks[0][0]=(Chunk)malloc(sizeof(Chunk));
-chunks[0][0]->data[1][1][1]=0.0f;
+
+
 
 
 void mouse_callback(GLFWwindow* window, double dmposx, double dmposy) {
@@ -82,6 +89,17 @@ void mouse_callback(GLFWwindow* window, double dmposx, double dmposy) {
 
 char shouldClose = 0;
 
+const float edgeTable[12][3] = {
+    {0.0, -1.0, -1.0},{1.0, -1.0, 0.0},{0.0, -1.0, 1.0},{-1.0, -1.0, 0.0},
+    {0.0, 1.0, -1.0},{1.0, 1.0, 0.0},{0.0, 1.0, 1.0},{-1.0, 1.0, 0.0},
+    {-1.0, 0.0, -1.0},{1.0, 0.0, -1.0},{1.0, 0.0, 1.0},{-1.0, 0.0, 1.0}
+};
+
+/*const float edgeTable[12][3] = {
+        {1.0, 0.0, 0.0},{0.0, 1.0, 0.0},{-1.0, 0.0, 0.0},{0.0, -1.0, 0.0},
+        {1.0, 0.0, 0.0},{0.0, 1.0, 0.0},{-1.0, 0.0, 0.0},{0.0, -1.0, 0.0},
+        {0.0, 0.0, 1.0},{0.0, 0.0, 1.0},{ 0.0, 0.0, 1.0},{0.0,  0.0, 1.0}
+};*/
 
 
 
@@ -91,14 +109,36 @@ char shouldClose = 0;
 
 
 int main() {
-    uint32_t width=800;
+    Chunk* chunks[chunksWidth][chunksLength];
+    for (int i = 0; i < chunksWidth; i++) {
+        for (int ii = 0; ii < chunksLength; ii++) {
+            chunks[i][ii]=(Chunk*)malloc(sizeof(Chunk));
+            
+            /*for (int cx = 0; cx < chunkWidth; cx++) {
+                //for (int cy = 0; cy < chunkHeight; cy++) {
+                    for (int cz = 0; cz < chunkWidth; cz++) {
+                        chunks[i][ii]->data[cx][0][cz]=0.5;
+                    }
+                //}
+            }*/
+        }
+    }
+    chunks[0][0]->data[2][2][2]=0.5;
+    chunks[0][0]->data[2][2][3]=0.5;
+    glm::mat4 baseModel = glm::scale(glm::vec3(cubeSize,cubeSize,cubeSize)) * glm::mat4(1.0f);
+    
+    
+
+
+
+
+    uint32_t width=600;
     uint32_t height=600;
 
     const char* vertexShaderSrc = "#version 330 core\n"
     "uniform mat4 model;\n"
     "uniform mat4 view;\n"
     "uniform mat4 projection;\n"
-    //"uniform float time;\n"
     "layout (location=0) in vec3 pos;\n"
     "void main(){\n"
     "   gl_Position=projection * view * model * vec4(pos,1);}\0";
@@ -191,10 +231,10 @@ int main() {
 
     glm::mat4 view = glm::mat4(1.0f);
     glm::mat4 projection = glm::mat4(1.0f);
-    float color[] = {1.0f,0.0f,0.0f};
+    float color[] = {0.8f,0.8f,0.8f};
 
     projection = glm::perspective(glm::radians(60.0f), 1.0f, 0.1f, 500.0f);
-    glUniformMatrix4fv(projectionLocation, 1, GL_FALSE, glm::value_ptr(projection));
+    
 
     
     
@@ -209,17 +249,21 @@ int main() {
     glBindVertexArray(VAO);
     
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    //glBufferData(GL_ARRAY_BUFFER, sizeof(squarePoints), squarePoints, GL_DYNAMIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(edgeTable), edgeTable, GL_STATIC_DRAW);
 
+    char test[] = {0, 8, 3};
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    //glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(squareInds), squareInds, GL_DYNAMIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, 15, test, GL_STREAM_DRAW);
 
     glVertexAttribPointer(0,3,GL_FLOAT,GL_FALSE,3*sizeof(float),(void*)0);
     glEnableVertexAttribArray(0);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    
     glBindVertexArray(0);
     glUseProgram(0);
+    
+    
 
+    
     
 
     
@@ -229,16 +273,22 @@ int main() {
     while (!(glfwWindowShouldClose(window) || shouldClose)) {
         glfwPollEvents();
         if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
-            camPos = camPos + camDir;
+            camPos += camDir * camSpeed;
         }
         if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
-            
+            camPos -= glm::normalize(glm::cross(camDir, camUp)) * camSpeed;
         }
         if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
-            camPos = camPos + camDir;
+            camPos -= camDir * camSpeed;
         }
         if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
-            
+            camPos += glm::normalize(glm::cross(camDir, camUp)) * camSpeed;
+        }
+        if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) {
+            camPos.y -= camSpeed;
+        }
+        if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) {
+            camPos.y += camSpeed;
         }
         
         
@@ -248,14 +298,62 @@ int main() {
         
         
         //render
+
+        glUseProgram(shaderProgram);
+        glBindVertexArray(VAO);
+
+        camDir.x = cos(camxr) * cos(camyr);
+        camDir.y = sin(camyr);
+        camDir.z = sin(camxr) * cos(camyr);
+
+        view = glm::lookAt(camPos, camPos + camDir, camUp);
+        glUniformMatrix4fv(viewLocation, 1, GL_FALSE, glm::value_ptr(view));
+        glUniformMatrix4fv(projectionLocation, 1, GL_FALSE, glm::value_ptr(projection));
+
+        glUniform3f(colorLocation, color[0],color[1],color[2]);
+
         glClearColor(0.20f, 0.5f, 0.9f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glDisable(GL_CULL_FACE);
+        glEnable(GL_DEPTH_TEST);
+        
+        for (int chx = 0; chx < chunksWidth; chx++) {
+            for (int chz = 0; chz < chunksLength; chz++) {
+                //printf("\n");
+                for (int cx = 0; cx < chunkWidth-1; cx++) {
+                    for (int cy = 0; cy < chunkHeight-1; cy++) {
+                        for (int cz = 0; cz < chunkWidth-1; cz++) {
+                            unsigned char a = 0;
+                            if (chunks[chx][chz]->data[cx][cy][cz] > 0.0f){a|=1;}
+                            if (chunks[chx][chz]->data[cx+1][cy][cz] > 0.0f){a|=2;}
+                            if (chunks[chx][chz]->data[cx+1][cy][cz+1] > 0.0f){a|=4;}
+                            if (chunks[chx][chz]->data[cx][cy][cz+1] > 0.0f){a|=8;}
+                            if (chunks[chx][chz]->data[cx][cy+1][cz] > 0.0f){a|=16;}
+                            if (chunks[chx][chz]->data[cx+1][cy+1][cz] > 0.0f){a|=32;}
+                            if (chunks[chx][chz]->data[cx+1][cy+1][cz+1] > 0.0f){a|=64;}
+                            if (chunks[chx][chz]->data[cx][cy+1][cz+1] > 0.0f){a|=128;}
+                            
+                            
+                            int l = triangleConnectionTable[a][0];
+                            if (l==0) {continue;}
+                            
+                            //printf("%d %d %d %d %d %d %d\n",cx,cy,cz,a,triangleConnectionTable[a][1],triangleConnectionTable[a][2],triangleConnectionTable[a][3]);
 
-        for (int i = 0; i < 0; i++) {
-            //glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(a->model));
-            glUniform3f(colorLocation, 0.9f,0.95f,0.3f);
+                            
 
-            //glDrawElements(GL_TRIANGLES,36,GL_UNSIGNED_INT,0);
+                            glm::mat4 model = glm::translate(baseModel, glm::vec3(
+                                cubeSize*(chx*chunkWidth + cx),
+                                cubeSize*cy,
+                                cubeSize*(chz*chunkWidth + cz)
+                            ));
+                            
+                            glUniform3f(colorLocation, color[0],color[1],color[2]);
+                            glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(model));
+                            
+                            
+                            glBufferData(GL_ELEMENT_ARRAY_BUFFER, l, (&triangleConnectionTable[a][0])+1, GL_STREAM_DRAW);
+                            glDrawElements(GL_TRIANGLES,3*l,GL_UNSIGNED_BYTE,0);
+            }}}}
         }
         
         
