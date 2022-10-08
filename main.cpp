@@ -348,7 +348,7 @@ int main() {
         
         
         
-        printf("\n");
+        //printf("\n");
         for (int chx = 0; chx < chunksWidth; chx++) {
             for (int chz = 0; chz < chunksLength; chz++) {
                 for (int cx = 0; cx < chunkWidth-1; cx++) {
@@ -368,7 +368,7 @@ int main() {
                             int l = triangleConnectionTable[a][0];
                             if (l==0) {continue;}
                             
-                            printf("%d %d %d %d\n",a,2*(chx*chunkWidth + cx),2*cy,2*(chz*chunkWidth + cz));
+                            //printf("%d %d %d %d\n",a,2*(chx*chunkWidth + cx),2*cy,2*(chz*chunkWidth + cz));
 
                             
 
